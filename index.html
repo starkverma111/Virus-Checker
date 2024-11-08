@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Virus Checker</title>
+
+  <!-- Tailwind & Flowbite CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.css" rel="stylesheet" />
+  <link href="https://fonts.cdnfonts.com/css/google-sans" rel="stylesheet">
+
+  <!-- Vue.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+
+  <style>
+    * {
+      font-family: 'Product Sans', sans-serif;
+    }
+
+    /* Falling virus animation */
+    .virus-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 50;
+    }
+
+    .virus {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      background-image: url('./img/v1.png');
+      background-size: cover;
+      animation: fall linear infinite;
+      opacity: 0.8;
+    }
+
+    /* Define fall animation */
+    @keyframes fall {
+      from {
+        transform: translateY(-50px);
+      }
+      to {
+        transform: translateY(100vh);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+  <div id="app" class="flex items-center justify-center min-h-screen p-4 flex-col">
+    <!-- Loading Bar (initially hidden) -->
+    <div v-if="isLoading" class="fixed top-0 left-0 w-full h-1 bg-blue-600 transition-all" :style="{ width: loadingProgress + '%' }"></div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-2xl bg-white p-8 rounded-3xl shadow border-s border-b space-y-6">
+      <!-- Header -->
+      <h2 class="text-4xl font-semibold text-center text-gray-800">Virus Checker</h2>
+      <p class="text-center text-gray-600 text-lg">
+        Upload a file to check if it's safe or potentially harmful.
+      </p>
+
+      <!-- File Upload Section -->
+      <div class="space-y-4">
+        <!-- Image (optional) -->
+        <div class="flex justify-center">
+          <img src="./img/virus.png" alt="Virus Icon" style="height:150px;" />
+        </div>
+
+		<!-- File Upload Zone -->
+		<div class="flex items-center justify-center w-full">
+		  <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+			<div class="flex flex-col items-center justify-center pt-5 pb-6">
+			  <template v-if="file">
+				<img :src="filePreview || './img/filepic.png'" alt="File Preview" class="h-32 w-auto rounded-md" />
+			  </template>
+			  <template v-else>
+				<!-- Original Icon (only shows if no file is selected) -->
+				<svg class="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+				  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+				</svg>
+				<p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+				<p class="text-xs text-gray-500 mx-2 text-center">Supported file formats: SVG, PNG, JPG, GIF, ZIP, RAR, EXE & Others</p>
+			  </template>
+			</div>
+			<input id="dropzone-file" type="file" class="hidden" @change="onFileChange" />
+		  </label>
+		</div>
+
+
+      <!-- Check Button -->
+      <div class="flex justify-center">
+        <button 
+          @click="startScan"
+          :disabled="!file"
+          class="w-full text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-full text-lg px-5 py-3.5">
+          Scan File
+        </button>
+      </div>
+
+      <!-- Result Display -->
+      <div v-if="result" class="mt-4 text-center">
+        <p :class="{'text-green-600': result.safe, 'text-red-600': !result.safe}" class="text-lg font-medium">
+          {{ result.message }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Virus Rain Container -->
+    <div v-if="showVirusRain" class="virus-container">
+      <div v-for="virus in virusArray" :key="virus.id" class="virus" :style="virus.style"></div>
+    </div>
+  </div>
+
+ <p class="text-center my-8">Crafted with love by Niyander</p>
+  <script>
+new Vue({
+  el: '#app',
+  data() {
+    return {
+      file: null,
+      filePreview: null,
+      result: null,
+      showVirusRain: false,
+      virusArray: [],
+      isLoading: false,      // Controls visibility of loading bar
+      loadingProgress: 0     // Tracks progress percentage for the loading bar
+    };
+  },
+  methods: {
+    onFileChange(event) {
+      this.file = event.target.files[0];
+      if (this.file && this.isImage(this.file)) {
+        this.filePreview = URL.createObjectURL(this.file);
+      } else {
+        this.filePreview = null;
+      }
+    },
+    isImage(file) {
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
+      return imageTypes.includes(file.type);
+    },
+    startScan() {
+      if (!this.file) return;
+      
+      this.isLoading = true;
+      this.loadingProgress = 0;
+
+      const progressInterval = setInterval(() => {
+        if (this.loadingProgress >= 100) {
+          clearInterval(progressInterval);
+          this.isLoading = false;
+          this.checkFileType();
+        } else {
+          this.loadingProgress += 1.67; // Approx 6s to reach 100%
+        }
+      }, 100); // Update every 100ms
+    },
+    checkFileType() {
+      const safeExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg'];
+      const fileExtension = this.file.name.split('.').pop().toLowerCase();
+
+      if (safeExtensions.includes(fileExtension)) {
+        this.result = { safe: true, message: 'No virus found! This file appears safe.' };
+        this.stopVirusRain();
+      } else {
+        this.result = { safe: false, message: 'Virus detected! This file may be harmful.' };
+        this.startVirusRain();
+      }
+    },
+    startVirusRain() {
+      this.showVirusRain = true;
+      this.virusArray = [];
+      for (let i = 0; i < 20; i++) {
+        this.virusArray.push({
+          id: i,
+          style: { left: Math.random() * 98 + 'vw', animationDuration: Math.random() * 2 + 4 + 's' }
+        });
+      }
+      setTimeout(() => {
+        this.stopVirusRain();
+      }, 5000);
+    },
+    stopVirusRain() {
+      this.showVirusRain = false;
+    }
+  }
+});
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+</body>
+</html>
